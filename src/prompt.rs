@@ -3,7 +3,12 @@ use crate::config::Config;
 pub struct PromptBuilder;
 
 impl PromptBuilder {
-    pub fn build(config: &Config, diff: &str, recent_commits: &[String]) -> (String, String) {
+    pub fn build(
+        config: &Config,
+        diff: &str,
+        file_summaries: &[String],
+        recent_commits: &[String],
+    ) -> (String, String) {
         // 如果用户在配置中显式指定了 custom_prompt
         if let Some(ref custom) = config.custom_prompt {
             let recent_str = recent_commits.join("\n");
@@ -23,6 +28,17 @@ impl PromptBuilder {
         };
 
         let mut user_prompt = String::new();
+
+        if !file_summaries.is_empty() {
+            user_prompt.push_str("<changed_files_summary>\n");
+            for summary in file_summaries {
+                user_prompt.push_str("- ");
+                user_prompt.push_str(summary);
+                user_prompt.push('\n');
+            }
+            user_prompt.push_str("</changed_files_summary>\n\n");
+        }
+
         if !recent_commits.is_empty() {
             user_prompt.push_str("<recent_commits>\n");
             for commit in recent_commits {
@@ -42,12 +58,17 @@ impl PromptBuilder {
     fn conventional_system_prompt(language: &str) -> String {
         if language == "en-US" {
             r#"You are an expert Git commit message generator.
-Analyze the provided code diff and output a clean commit message following Conventional Commits.
+Analyze the provided changed files and code diff, then output a clean and concise commit message following Conventional Commits.
+
+Diff Semantics:
+1. Lines starting with '-' represent removed content; lines starting with '+' represent added/modified content.
+2. If a file only contains '-' lines, it was deleted or cleared. Do not hallucinate added features on deleted files.
+3. Consider all modified files to capture the core intent.
 
 Format:
-<type>(<scope>): <subject>
+<type>(<optional-scope>): <subject in English, under 72 chars>
 
-- Optional body bullet points after an empty line
+- Optional bullet points after an empty line for important details
 
 Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
 
@@ -59,16 +80,22 @@ Strict Rules:
 Examples:
 - feat(auth): add OAuth2 login support
 - fix(config): resolve endpoint URL normalization error
-- refactor(api): simplify request pipeline and error handling
+- chore(config): update default model to qwen3.5-4b and remove obsolete docs
 "#
             .to_string()
         } else {
-            r#"你是一个 Git 提交信息生成器。根据输入的代码变更（Git Diff）生成规范的 Commit Message。
+            r#"你是一个专业的 Git 提交信息生成器。请根据输入的变更文件概括与 Git Diff 生成规范的 Commit Message。
+
+Diff 语义准则：
+1. '-' 行代表被删除/移除的内容；'+' 行代表新增/修改的内容。
+2. 若某文件全为 '-' 行，说明该文件被清空或删除，切勿误判为新增内容。
+3. 综合所有修改过的文件，提取最核心的变更意图。
 
 格式要求：
-<type>(<scope>): <简要总结（首行不超过72字符）>
+第一行格式必须为 Conventional Commits 规范（英文类型前缀 + 冒号 + 空格 + 中文描述）：
+feat(scope): 描述 或 chore(scope): 描述 或 fix: 描述
 
-- 如果需要补充细节，在空一行后以列表形式列出重要变更点
+- 可选正文：若涉及多处细节，空一行后以列表列出具体变更点
 
 可用类型: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
 
@@ -78,9 +105,9 @@ Examples:
 3. 语言使用中文（zh-CN），首行保持精炼（72 字符以内）。
 
 示例：
+- chore(config): 更新默认模型为 qwen3.5-4b 并删除旧版中文文档
 - feat(auth): 支持 OAuth2 快捷登录与状态校验
-- fix(config): 修复端点 URL 解析与斜杠补全逻辑
-- refactor(api): 简化网络请求管道并优化错误提示
+- refactor(filter): 优化 Diff 行数截断计算逻辑
 "#
             .to_string()
         }
@@ -161,12 +188,14 @@ mod tests {
     fn test_prompt_building_with_commits() {
         let config = Config::default();
         let diff = "diff --git a/src/main.rs b/src/main.rs\n+ let a = 1;";
+        let summaries = vec!["src/main.rs: [Modified (+1, -0)]".to_string()];
         let commits = vec!["abc1234 feat: init".to_string()];
 
-        let (sys, user) = PromptBuilder::build(&config, diff, &commits);
+        let (sys, user) = PromptBuilder::build(&config, diff, &summaries, &commits);
         assert!(sys.contains("Commit Message"));
+        assert!(user.contains("<changed_files_summary>"));
+        assert!(user.contains("src/main.rs"));
         assert!(user.contains("<recent_commits>"));
-        assert!(user.contains("abc1234 feat: init"));
         assert!(user.contains("<git_diff>"));
     }
 }

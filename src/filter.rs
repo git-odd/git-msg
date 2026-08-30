@@ -7,13 +7,19 @@ pub struct FileDiff {
     pub is_binary: bool,
 }
 
-/// 将 Git 原始 Diff 按照文件拆分、过滤忽略文件并执行两级截断保护
+#[derive(Debug, Clone)]
+pub struct FilteredDiff {
+    pub content: String,
+    pub summaries: Vec<String>,
+}
+
+/// 将 Git 原始 Diff 按照文件拆分、过滤忽略文件并执行两级截断保护，同时提取文件改动概要
 pub fn filter_and_truncate_diff(
     raw_diff: &str,
     ignore_patterns: &[String],
     max_file_diff_lines: usize,
     max_diff_lines: usize,
-) -> String {
+) -> FilteredDiff {
     let file_diffs = parse_diff_files(raw_diff);
 
     // 构建 glob patterns
@@ -23,6 +29,7 @@ pub fn filter_and_truncate_diff(
         .collect();
 
     let mut result_chunks = Vec::new();
+    let mut summaries = Vec::new();
     let mut total_lines = 0;
     let mut globally_truncated = false;
 
@@ -32,21 +39,25 @@ pub fn filter_and_truncate_diff(
             continue;
         }
 
-        // 2. 如果已达到全局总行数限制
+        // 2. 统计文件改动概要
+        let summary = summarize_file_change(&diff);
+        summaries.push(summary);
+
+        // 3. 如果已达到全局总行数限制
         if total_lines >= max_diff_lines {
             globally_truncated = true;
             break;
         }
 
-        // 3. 处理二进制文件
+        // 4. 处理二进制文件
         if diff.is_binary {
-            let summary = format!("diff --git a/{} b/{}\n[Binary file modified]", diff.file_path, diff.file_path);
+            let chunk = format!("diff --git a/{} b/{}\n[Binary file modified]", diff.file_path, diff.file_path);
             total_lines += 2;
-            result_chunks.push(summary);
+            result_chunks.push(chunk);
             continue;
         }
 
-        // 4. 单文件行数截断
+        // 5. 单文件行数截断
         let file_quota = max_file_diff_lines.min(max_diff_lines.saturating_sub(total_lines));
 
         let mut lines_to_take = diff.raw_lines.clone();
@@ -71,7 +82,35 @@ pub fn filter_and_truncate_diff(
         result_chunks.push(format!("\n[... Remaining diff truncated (exceeded global limit of {} lines) ...]", max_diff_lines));
     }
 
-    result_chunks.join("\n\n")
+    FilteredDiff {
+        content: result_chunks.join("\n\n"),
+        summaries,
+    }
+}
+
+fn summarize_file_change(diff: &FileDiff) -> String {
+    if diff.is_binary {
+        return format!("{}: [Binary file modified]", diff.file_path);
+    }
+
+    let mut added = 0;
+    let mut deleted = 0;
+
+    for line in &diff.raw_lines {
+        if line.starts_with('+') && !line.starts_with("+++") {
+            added += 1;
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            deleted += 1;
+        }
+    }
+
+    if added == 0 && deleted > 0 {
+        format!("{}: [Content removed / Deleted]", diff.file_path)
+    } else if deleted == 0 && added > 0 {
+        format!("{}: [New file / Added]", diff.file_path)
+    } else {
+        format!("{}: [Modified (+{}, -{})]", diff.file_path, added, deleted)
+    }
 }
 
 fn is_file_ignored(file_path: &str, patterns: &[Pattern]) -> bool {
@@ -146,9 +185,10 @@ index 333..444 100644
         let ignored = vec!["Cargo.lock".to_string(), "*.lock".to_string()];
         let filtered = filter_and_truncate_diff(diff, &ignored, 100, 500);
 
-        assert!(!filtered.contains("Cargo.lock"));
-        assert!(filtered.contains("src/main.rs"));
-        assert!(filtered.contains("println!(\"hello\");"));
+        assert!(!filtered.content.contains("Cargo.lock"));
+        assert!(filtered.content.contains("src/main.rs"));
+        assert_eq!(filtered.summaries.len(), 1);
+        assert!(filtered.summaries[0].contains("src/main.rs"));
     }
 
     #[test]
@@ -160,6 +200,6 @@ index 333..444 100644
         let diff = lines.join("\n");
 
         let filtered = filter_and_truncate_diff(&diff, &[], 50, 500);
-        assert!(filtered.contains("[... 153 lines truncated in src/big.rs ...]"));
+        assert!(filtered.content.contains("[... 153 lines truncated in src/big.rs ...]"));
     }
 }

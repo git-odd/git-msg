@@ -82,11 +82,17 @@ fn run() -> Result<()> {
     };
 
     let config = Config::load(repo_root.as_deref(), &cli.run_args)?;
+    let is_zh = config.behavior.language == "zh-CN";
 
     // 收集 Diff
     let (raw_diff, need_stage) = GitManager::collect_diff(config.behavior.auto_stage_if_empty)?;
     if raw_diff.trim().is_empty() {
-        println!("{}", "No changes detected to commit.".yellow());
+        let msg = if is_zh {
+            "未检测到任何代码变更。"
+        } else {
+            "No changes detected to commit."
+        };
+        println!("{}", msg.yellow());
         return Ok(());
     }
 
@@ -98,8 +104,13 @@ fn run() -> Result<()> {
         config.behavior.max_diff_lines,
     );
 
-    if filtered_diff.trim().is_empty() {
-        println!("{}", "No relevant changes found after applying diff filter.".yellow());
+    if filtered_diff.content.trim().is_empty() {
+        let msg = if is_zh {
+            "应用过滤规则后未发现有效改动。"
+        } else {
+            "No relevant changes found after applying diff filter."
+        };
+        println!("{}", msg.yellow());
         return Ok(());
     }
 
@@ -111,7 +122,12 @@ fn run() -> Result<()> {
 
     // 如果指定了 --dry-run，仅打印消息
     if cli.run_args.dry_run {
-        let (sys, user) = PromptBuilder::build(&config, &filtered_diff, &recent_commits);
+        let (sys, user) = PromptBuilder::build(
+            &config,
+            &filtered_diff.content,
+            &filtered_diff.summaries,
+            &recent_commits,
+        );
         let msg = llm_client.generate_commit_message(&sys, &user)?;
         println!("{}", msg);
         return Ok(());
@@ -119,8 +135,19 @@ fn run() -> Result<()> {
 
     // 交互式生成循环（支持重新生成）
     loop {
-        let spinner = Ui::create_spinner("Analyzing diff & generating commit message...");
-        let (sys, user) = PromptBuilder::build(&config, &filtered_diff, &recent_commits);
+        let spinner_text = if is_zh {
+            "正在分析代码变更并生成提交信息..."
+        } else {
+            "Analyzing diff & generating commit message..."
+        };
+        let spinner = Ui::create_spinner(spinner_text);
+
+        let (sys, user) = PromptBuilder::build(
+            &config,
+            &filtered_diff.content,
+            &filtered_diff.summaries,
+            &recent_commits,
+        );
         let generated_msg = match llm_client.generate_commit_message(&sys, &user) {
             Ok(msg) => {
                 spinner.finish_and_clear();
@@ -132,7 +159,7 @@ fn run() -> Result<()> {
             }
         };
 
-        Ui::render_commit_message_box(&generated_msg);
+        Ui::render_commit_message_box(&generated_msg, &config.behavior.language);
 
         // 如果开启了 --yes，直接提交
         if cli.run_args.yes {
@@ -140,39 +167,69 @@ fn run() -> Result<()> {
                 GitManager::stage_all()?;
             }
             GitManager::commit_with_file(&generated_msg)?;
-            println!("{}", "Commit successful!".green().bold());
+            let success_text = if is_zh {
+                "提交成功！"
+            } else {
+                "Commit successful!"
+            };
+            println!("{}", success_text.green().bold());
             return Ok(());
         }
 
         // 交互选择菜单
-        match Ui::prompt_action()? {
+        match Ui::prompt_action(&config.behavior.language)? {
             UserAction::Commit => {
                 if need_stage {
                     GitManager::stage_all()?;
                 }
                 GitManager::commit_with_file(&generated_msg)?;
-                println!("{}", "Commit successful!".green().bold());
+                let success_text = if is_zh {
+                    "提交成功！"
+                } else {
+                    "Commit successful!"
+                };
+                println!("{}", success_text.green().bold());
                 return Ok(());
             }
             UserAction::Edit => {
                 let edited_msg = GitManager::open_editor_for_message(&generated_msg)?;
                 if edited_msg.trim().is_empty() {
-                    println!("{}", "Commit aborted (empty commit message).".yellow());
+                    let abort_empty_text = if is_zh {
+                        "提交已取消（提交信息为空）。"
+                    } else {
+                        "Commit aborted (empty commit message)."
+                    };
+                    println!("{}", abort_empty_text.yellow());
                     return Ok(());
                 }
                 if need_stage {
                     GitManager::stage_all()?;
                 }
                 GitManager::commit_with_file(&edited_msg)?;
-                println!("{}", "Commit successful with edited message!".green().bold());
+                let success_text = if is_zh {
+                    "以修改后的内容提交成功！"
+                } else {
+                    "Commit successful with edited message!"
+                };
+                println!("{}", success_text.green().bold());
                 return Ok(());
             }
             UserAction::Regenerate => {
-                println!("{}", "Regenerating commit message...\n".cyan());
+                let regen_text = if is_zh {
+                    "正在重新生成提交信息...\n"
+                } else {
+                    "Regenerating commit message...\n"
+                };
+                println!("{}", regen_text.cyan());
                 continue;
             }
             UserAction::Abort => {
-                println!("{}", "Commit aborted by user.".yellow());
+                let abort_text = if is_zh {
+                    "用户已取消提交。"
+                } else {
+                    "Commit aborted by user."
+                };
+                println!("{}", abort_text.yellow());
                 return Ok(());
             }
         }

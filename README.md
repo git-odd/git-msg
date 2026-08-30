@@ -1,5 +1,8 @@
 # git-msg
 
+[![Crates.io](https://img.shields.io/crates/v/git-msg.svg)](https://crates.io/crates/git-msg)
+[![License](https://img.shields.io/crates/l/git-msg.svg)](https://crates.io/crates/git-msg)
+
 [English](README.md) | [中文](README.zh.md)
 
 `git-msg` is a smart, lightweight, and local-first AI Git commit message generator built in Rust. It seamlessly integrates as a native Git subcommand (`git msg`), analyzes your staged or working tree diffs, and automatically generates high-quality commit messages conforming to Conventional Commits, Gitmoji, or custom styles.
@@ -15,6 +18,7 @@
   * Automatically detects untracked new files via `git add -N` when the staging area is empty.
   * Filters out noise files (such as `Cargo.lock`, `package-lock.json`, minified assets).
   * Two-tier truncation protection (per-file quota and global line limits).
+  * **Secret Redaction**: Automatically redacts API keys and access tokens (`sk-...`, `ghp_...`, `AKIA...`) in diffs before sending to LLMs.
 * **Safe & Robust Commits**: Uses temporary files with `git commit -F` to eliminate quote escaping and newline corruption across Windows/Linux/macOS shells.
 * **Interactive Terminal UX**: Rich CLI experience with spinners, styled commit preview boxes, and quick action menus (`Commit`, `Edit`, `Regenerate`, `Abort`).
 
@@ -22,16 +26,22 @@
 
 ## 🚀 Installation
 
-Ensure you have Rust and Cargo installed:
+### Via Cargo (Recommended)
 
 ```bash
-cargo install --path .
+cargo install git-msg
 ```
 
-Or install from crates.io / git repository:
+### From Git Repository
 
 ```bash
 cargo install --git https://github.com/git-odd/git-msg.git
+```
+
+### From Local Source
+
+```bash
+cargo install --path .
 ```
 
 Once installed, `git msg` is ready to use in any Git repository.
@@ -97,27 +107,29 @@ git msg init
 4. Global Configuration (`~/.config/git-msg/config.toml` or `%APPDATA%\git-msg\config.toml`)
 5. Built-in Defaults
 
+> 🔒 **Security Notice**: For cloud API keys (e.g. OpenAI / DeepSeek), store them in your global configuration (`git msg config`) or `$OPENAI_API_KEY` to avoid committing secrets into Git repositories.
+
 ### Example `.gitmsg.toml`
 
 ```toml
+# git-msg configuration
+
 [provider]
-# OpenAI-compatible API endpoint (base URL or with /v1 path)
 endpoint = "http://127.0.0.1:1234"
+# Set to "not-needed" for local models. For cloud APIs, use $OPENAI_API_KEY or global config (`git msg config`)
 api_key = "not-needed"
 model = "qwen3.5-2b"
 timeout_seconds = 30
 temperature = 0.2
 
 [behavior]
-# Built-in templates: "conventional" | "simple" | "gitmoji"
-template = "conventional"
-language = "zh-CN"               # "zh-CN" | "en-US"
-auto_stage_if_empty = true       # Auto-stage working changes if index is empty
-max_diff_lines = 500             # Global maximum diff lines limit
-max_file_diff_lines = 150        # Per-file maximum diff lines limit
+template = "conventional"        # Options: conventional | simple | gitmoji
+language = "en-US"               # Options: en-US | zh-CN
+auto_stage_if_empty = true       # Auto-stage working tree if staging area is empty
+max_diff_lines = 500             # Global diff line limit for LLM context
+max_file_diff_lines = 150        # Per-file diff line quota to avoid single-file saturation
 
 [diff_filter]
-# Glob patterns to exclude from diff analysis
 ignore_files = [
     "Cargo.lock",
     "package-lock.json",
@@ -129,8 +141,8 @@ ignore_files = [
     "*.lock"
 ]
 
-# Optional: Custom prompt overriding default templates
-# Available variables: {diff}, {recent_commits}, {language}
+# Optional: Override built-in templates with your custom prompt
+# Variables: {diff}, {recent_commits}, {language}
 # custom_prompt = """
 # You are a commit generator. Generate a commit message based on:
 # {diff}

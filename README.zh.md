@@ -1,5 +1,8 @@
 # git-msg
 
+[![Crates.io](https://img.shields.io/crates/v/git-msg.svg)](https://crates.io/crates/git-msg)
+[![License](https://img.shields.io/crates/l/git-msg.svg)](https://crates.io/crates/git-msg)
+
 [English](README.md) | [中文](README.zh.md)
 
 `git-msg` 是一个基于 Rust 开发的轻量级、本地优先（Local-First）的智能 Git 提交信息生成工具。它作为 Git 原生子命令（`git msg`）无缝集成到日常开发工作流中，自动分析暂存区或工作区代码差异（Diff），结合上下文生成规范的 Conventional Commits、Gitmoji 或简明风格提交信息。
@@ -15,6 +18,7 @@
   * 暂存区为空时，自动检测工作区并通过 `git add -N` 捕获新增的未跟踪文件（Untracked Files）。
   * 自动过滤锁定文件与无意义改动（如 `Cargo.lock`、`package-lock.json`、压缩资源等）。
   * 单文件配额（150行）与全局上限（500行）两级截断保护，防止大文件耗尽上下文。
+  * **敏感凭证脱敏**：在向大模型发送 Diff 前，自动正则脱敏常见 API Key 与 Token（`sk-...`、`ghp_...`、`AKIA...` 等）。
 * **跨平台安全提交**：使用临时文件与 `git commit -F` 执行提交，彻底杜绝 Windows/Linux/macOS 下 Shell 传递多行文本与引号转义异常。
 * **友好交互式终端 UX**：具备加载动画、边框高亮预览与快捷操作菜单（`Commit 确认提交`、`Edit 编辑器修改`、`Regenerate 重新生成`、`Abort 取消退出`）。
 
@@ -22,16 +26,22 @@
 
 ## 🚀 安装指南
 
-确保本地已安装 Rust 与 Cargo：
+### 方式一：通过 Cargo 安装（推荐）
 
 ```bash
-cargo install --path .
+cargo install git-msg
 ```
 
-或从 Git 仓库直接安装：
+### 方式二：从 Git 仓库安装
 
 ```bash
 cargo install --git https://github.com/git-odd/git-msg.git
+```
+
+### 方式三：从源码本地安装
+
+```bash
+cargo install --path .
 ```
 
 安装完成后，即可在任意 Git 项目中使用 `git msg`。
@@ -97,27 +107,29 @@ git msg init
 4. 用户全局配置（`~/.config/git-msg/config.toml` 或 Windows `%APPDATA%\git-msg\config.toml`）
 5. 内置默认值
 
+> 🔒 **安全提示**：对于云端 API Key（如 OpenAI / DeepSeek），建议保存在用户全局配置（`git msg config`）或环境变量 `$OPENAI_API_KEY` 中，避免将密钥误提交到 Git 仓库。
+
 ### 配置文件结构示例 (`.gitmsg.toml` / `config.toml`)
 
 ```toml
+# git-msg configuration
+
 [provider]
-# 支持基础 URL（如 http://127.0.0.1:1234）或完整路径（如 http://localhost:1234/v1）
 endpoint = "http://127.0.0.1:1234"
+# 本地模型保持 "not-needed"；云端模型建议通过 $OPENAI_API_KEY 或全局配置 (`git msg config`) 设置
 api_key = "not-needed"
 model = "qwen3.5-2b"
 timeout_seconds = 30
 temperature = 0.2
 
 [behavior]
-# 内置模板: "conventional" | "simple" | "gitmoji"
-template = "conventional"
-language = "zh-CN"               # "zh-CN" | "en-US"
+template = "conventional"        # Options: conventional | simple | gitmoji
+language = "en-US"               # Options: en-US | zh-CN
 auto_stage_if_empty = true       # 暂存区为空时是否自动暂存工作区所有更改
 max_diff_lines = 500             # 全局 Diff 总行数截断上限
 max_file_diff_lines = 150        # 单文件最大 Diff 行数
 
 [diff_filter]
-# 忽略不参与 Diff 提取的文件模式 (Glob 匹配)
 ignore_files = [
     "Cargo.lock",
     "package-lock.json",

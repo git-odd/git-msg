@@ -192,7 +192,7 @@ mod tests {
         let commits = vec!["abc1234 feat: init".to_string()];
 
         let (sys, user) = PromptBuilder::build(&config, diff, &summaries, &commits);
-        assert!(sys.contains("Commit Message"));
+        assert!(sys.to_lowercase().contains("commit message"));
         assert!(user.contains("<changed_files_summary>"));
         assert!(user.contains("src/main.rs"));
         assert!(user.contains("<recent_commits>"));

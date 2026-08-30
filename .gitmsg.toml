@@ -9,7 +9,7 @@ temperature = 0.2
 
 [behavior]
 template = "conventional"        # Options: conventional | simple | gitmoji
-language = "zh-CN"               # Options: zh-CN | en-US
+language = "en-US"               # Options: en-US | zh-CN
 auto_stage_if_empty = true       # Auto-stage working tree if staging area is empty
 max_diff_lines = 500             # Global diff line limit for LLM context
 max_file_diff_lines = 150        # Per-file diff line quota to avoid single-file saturation

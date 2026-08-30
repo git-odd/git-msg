@@ -25,7 +25,7 @@ fn strip_markdown_fences(input: &str) -> String {
     // 如果整个文本以 ``` 开头并以 ``` 结尾
     if trimmed.starts_with("```") {
         let lines: Vec<&str> = trimmed.lines().collect();
-        if lines.len() >= 2 && lines.last().map_or(false, |l| l.trim() == "```") {
+        if lines.len() >= 2 && lines.last().is_some_and(|l| l.trim() == "```") {
             let inner_lines = &lines[1..lines.len() - 1];
             return inner_lines.join("\n").trim().to_string();
         }
@@ -72,16 +72,14 @@ fn clean_whitespace(input: &str) -> String {
     let mut cleaned_lines = Vec::new();
     let mut consecutive_empty = 0;
 
-    let placeholder_patterns = [
-        "[空一行]",
-        "[空行]",
-        "[optional body]",
-        "[可选正文]",
-    ];
+    let placeholder_patterns = ["[空一行]", "[空行]", "[optional body]", "[可选正文]"];
 
     for line in input.lines() {
         let trimmed = line.trim();
-        if placeholder_patterns.iter().any(|&p| trimmed.eq_ignore_ascii_case(p)) {
+        if placeholder_patterns
+            .iter()
+            .any(|&p| trimmed.eq_ignore_ascii_case(p))
+        {
             continue;
         }
 
@@ -113,12 +111,16 @@ mod tests {
     #[test]
     fn test_think_tag_removal() {
         let input = "<think>\nThinking about changes...\n</think>\nfix(api): resolve timeout issue";
-        assert_eq!(sanitize_commit_message(input), "fix(api): resolve timeout issue");
+        assert_eq!(
+            sanitize_commit_message(input),
+            "fix(api): resolve timeout issue"
+        );
     }
 
     #[test]
     fn test_markdown_fence_removal() {
-        let input = "```git\nfeat(core): initialize project structure\n\n- Add config\n- Add CLI\n```";
+        let input =
+            "```git\nfeat(core): initialize project structure\n\n- Add config\n- Add CLI\n```";
         let expected = "feat(core): initialize project structure\n\n- Add config\n- Add CLI";
         assert_eq!(sanitize_commit_message(input), expected);
     }
@@ -126,7 +128,10 @@ mod tests {
     #[test]
     fn test_preamble_removal() {
         let input = "Here is the commit message:\n\nfeat(ui): add spinner animation";
-        assert_eq!(sanitize_commit_message(input), "feat(ui): add spinner animation");
+        assert_eq!(
+            sanitize_commit_message(input),
+            "feat(ui): add spinner animation"
+        );
 
         let input_zh = "生成的提交信息：\nfix(db): 修复连接池泄漏";
         assert_eq!(sanitize_commit_message(input_zh), "fix(db): 修复连接池泄漏");

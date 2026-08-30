@@ -7,11 +7,11 @@ mod prompt;
 mod sanitizer;
 mod ui;
 
-use std::fs;
-use std::process;
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
+use std::fs;
+use std::process;
 
 use crate::cli::{Cli, Commands};
 use crate::config::Config;
@@ -41,7 +41,10 @@ fn run() -> Result<()> {
                     return Ok(());
                 }
 
-                println!("Opening configuration in editor: {}", config_path.display().to_string().cyan());
+                println!(
+                    "Opening configuration in editor: {}",
+                    config_path.display().to_string().cyan()
+                );
                 let initial_content = fs::read_to_string(&config_path).unwrap_or_default();
                 let edited = GitManager::open_editor_for_message(&initial_content)?;
                 fs::write(&config_path, edited).context("Failed to write updated configuration")?;
@@ -60,8 +63,9 @@ fn run() -> Result<()> {
                     return Ok(());
                 }
 
-                fs::write(&project_config_path, Config::template_toml())
-                    .with_context(|| format!("Failed to create {}", project_config_path.display()))?;
+                fs::write(&project_config_path, Config::template_toml()).with_context(|| {
+                    format!("Failed to create {}", project_config_path.display())
+                })?;
                 println!(
                     "{} Created project config at {}",
                     "Success:".green().bold(),

@@ -1,9 +1,9 @@
+use anyhow::{Context, Result, bail};
 use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use anyhow::{bail, Context, Result};
 use tempfile::NamedTempFile;
 
 pub struct GitManager;
@@ -47,11 +47,9 @@ impl GitManager {
         // 4. 处理未跟踪文件 (通过 git add -N 临时纳入 diff 追踪)
         for line in status.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("?? ") {
-                let file_path = &trimmed[3..].trim();
-                let _ = Command::new("git")
-                    .args(["add", "-N", file_path])
-                    .output();
+            if let Some(stripped) = trimmed.strip_prefix("?? ") {
+                let file_path = stripped.trim();
+                let _ = Command::new("git").args(["add", "-N", file_path]).output();
             }
         }
 
@@ -81,27 +79,28 @@ impl GitManager {
             .args(["log", &count_arg, "--oneline"])
             .output();
 
-        if let Ok(out) = output {
-            if out.status.success() {
+        match output {
+            Ok(out) if out.status.success() => {
                 let text = String::from_utf8_lossy(&out.stdout);
-                return text
-                    .lines()
+                text.lines()
                     .map(|l| l.trim().to_string())
                     .filter(|l| !l.is_empty())
-                    .collect();
+                    .collect()
             }
+            _ => Vec::new(),
         }
-
-        Vec::new()
     }
 
     /// 使用临时文件和 -F 参数安全提交，彻底规避 Shell 换行与引号转义异常
     pub fn commit_with_file(message: &str) -> Result<()> {
-        let mut temp_file = NamedTempFile::new().context("Failed to create temporary file for commit message")?;
+        let mut temp_file =
+            NamedTempFile::new().context("Failed to create temporary file for commit message")?;
         temp_file
             .write_all(message.as_bytes())
             .context("Failed to write commit message to temporary file")?;
-        temp_file.flush().context("Failed to flush temporary file")?;
+        temp_file
+            .flush()
+            .context("Failed to flush temporary file")?;
 
         let temp_path = temp_file.path();
 
@@ -121,7 +120,8 @@ impl GitManager {
 
     /// 调用系统编辑器编辑提交信息
     pub fn open_editor_for_message(initial_content: &str) -> Result<String> {
-        let mut temp_file = NamedTempFile::new().context("Failed to create temporary file for editing")?;
+        let mut temp_file =
+            NamedTempFile::new().context("Failed to create temporary file for editing")?;
         temp_file
             .write_all(initial_content.as_bytes())
             .context("Failed to write initial content to temp file")?;
@@ -145,28 +145,19 @@ impl GitManager {
     fn resolve_editor() -> String {
         // 1. git var GIT_EDITOR
         if let Ok(output) = Command::new("git").args(["var", "GIT_EDITOR"]).output() {
-            if output.status.success() {
-                let ed = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !ed.is_empty() {
-                    return ed;
-                }
+            let ed = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if output.status.success() && !ed.is_empty() {
+                return ed;
             }
         }
 
         // 2. 环境变量
-        if let Ok(ed) = env::var("GIT_EDITOR") {
-            if !ed.trim().is_empty() {
-                return ed;
-            }
-        }
-        if let Ok(ed) = env::var("VISUAL") {
-            if !ed.trim().is_empty() {
-                return ed;
-            }
-        }
-        if let Ok(ed) = env::var("EDITOR") {
-            if !ed.trim().is_empty() {
-                return ed;
+        for var in ["GIT_EDITOR", "VISUAL", "EDITOR"] {
+            if let Ok(ed) = env::var(var) {
+                let trimmed = ed.trim();
+                if !trimmed.is_empty() {
+                    return trimmed.to_string();
+                }
             }
         }
 
@@ -195,7 +186,12 @@ impl GitManager {
         #[cfg(not(windows))]
         {
             let status = Command::new("sh")
-                .args(["-c", &format!("{} \"$1\"", editor_cmd), "--", file_path.to_str().unwrap_or_default()])
+                .args([
+                    "-c",
+                    &format!("{} \"$1\"", editor_cmd),
+                    "--",
+                    file_path.to_str().unwrap_or_default(),
+                ])
                 .stdin(Stdio::inherit())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())

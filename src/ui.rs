@@ -22,16 +22,34 @@ impl fmt::Display for ActionItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.language == "zh-CN" {
             match self.action {
-                UserAction::Commit => write!(f, "{}", "提交 (Commit)       - 确认并执行提交".green().bold()),
-                UserAction::Edit => write!(f, "{}", "编辑 (Edit)         - 打开编辑器修改后提交".cyan()),
-                UserAction::Regenerate => write!(f, "{}", "重新生成 (Regenerate) - 重新调用模型生成".yellow()),
+                UserAction::Commit => write!(
+                    f,
+                    "{}",
+                    "提交 (Commit)       - 确认并执行提交".green().bold()
+                ),
+                UserAction::Edit => {
+                    write!(f, "{}", "编辑 (Edit)         - 打开编辑器修改后提交".cyan())
+                }
+                UserAction::Regenerate => {
+                    write!(f, "{}", "重新生成 (Regenerate) - 重新调用模型生成".yellow())
+                }
                 UserAction::Abort => write!(f, "{}", "取消 (Abort)        - 取消并退出".red()),
             }
         } else {
             match self.action {
-                UserAction::Commit => write!(f, "{}", "Commit       - Confirm and execute commit".green().bold()),
-                UserAction::Edit => write!(f, "{}", "Edit         - Open in editor and commit".cyan()),
-                UserAction::Regenerate => write!(f, "{}", "Regenerate   - Re-generate commit message".yellow()),
+                UserAction::Commit => write!(
+                    f,
+                    "{}",
+                    "Commit       - Confirm and execute commit".green().bold()
+                ),
+                UserAction::Edit => {
+                    write!(f, "{}", "Edit         - Open in editor and commit".cyan())
+                }
+                UserAction::Regenerate => write!(
+                    f,
+                    "{}",
+                    "Regenerate   - Re-generate commit message".yellow()
+                ),
                 UserAction::Abort => write!(f, "{}", "Abort        - Cancel and exit".red()),
             }
         }

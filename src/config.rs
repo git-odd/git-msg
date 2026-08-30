@@ -51,7 +51,7 @@ impl Default for BehaviorConfig {
     fn default() -> Self {
         Self {
             template: "conventional".to_string(),
-            language: "zh-CN".to_string(),
+            language: "en-US".to_string(),
             auto_stage_if_empty: true,
             max_diff_lines: 500,
             max_file_diff_lines: 150,
@@ -105,7 +105,7 @@ temperature = 0.2
 
 [behavior]
 template = "conventional"        # Options: conventional | simple | gitmoji
-language = "zh-CN"               # Options: zh-CN | en-US
+language = "en-US"               # Options: en-US | zh-CN
 auto_stage_if_empty = true       # Auto-stage working tree if staging area is empty
 max_diff_lines = 500             # Global diff line limit for LLM context
 max_file_diff_lines = 150        # Per-file diff line quota to avoid single-file saturation
@@ -270,6 +270,7 @@ mod tests {
         assert_eq!(parsed.provider.endpoint, "http://127.0.0.1:1234");
         assert_eq!(parsed.provider.model, "qwen3.5-2b");
         assert_eq!(parsed.behavior.template, "conventional");
+        assert_eq!(parsed.behavior.language, "en-US");
         assert_eq!(parsed.behavior.auto_stage_if_empty, true);
         assert_eq!(parsed.behavior.max_file_diff_lines, 150);
     }

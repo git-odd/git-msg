@@ -51,7 +51,10 @@ pub fn filter_and_truncate_diff(
 
         // 4. 处理二进制文件
         if diff.is_binary {
-            let chunk = format!("diff --git a/{} b/{}\n[Binary file modified]", diff.file_path, diff.file_path);
+            let chunk = format!(
+                "diff --git a/{} b/{}\n[Binary file modified]",
+                diff.file_path, diff.file_path
+            );
             total_lines += 2;
             result_chunks.push(chunk);
             continue;
@@ -66,7 +69,10 @@ pub fn filter_and_truncate_diff(
         if was_file_truncated {
             let truncated_count = lines_to_take.len() - file_quota;
             lines_to_take.truncate(file_quota);
-            lines_to_take.push(format!("[... {} lines truncated in {} ...]", truncated_count, diff.file_path));
+            lines_to_take.push(format!(
+                "[... {} lines truncated in {} ...]",
+                truncated_count, diff.file_path
+            ));
         }
 
         total_lines += lines_to_take.len();
@@ -79,7 +85,10 @@ pub fn filter_and_truncate_diff(
     }
 
     if globally_truncated {
-        result_chunks.push(format!("\n[... Remaining diff truncated (exceeded global limit of {} lines) ...]", max_diff_lines));
+        result_chunks.push(format!(
+            "\n[... Remaining diff truncated (exceeded global limit of {} lines) ...]",
+            max_diff_lines
+        ));
     }
 
     FilteredDiff {
@@ -115,11 +124,11 @@ fn summarize_file_change(diff: &FileDiff) -> String {
 
 fn is_file_ignored(file_path: &str, patterns: &[Pattern]) -> bool {
     let normalized = file_path.replace('\\', "/");
-    let file_name = normalized.split('/').last().unwrap_or(&normalized);
+    let file_name = normalized.split('/').next_back().unwrap_or(&normalized);
 
-    patterns.iter().any(|p| {
-        p.matches(&normalized) || p.matches(file_name)
-    })
+    patterns
+        .iter()
+        .any(|p| p.matches(&normalized) || p.matches(file_name))
 }
 
 fn parse_diff_files(raw_diff: &str) -> Vec<FileDiff> {
@@ -193,13 +202,21 @@ index 333..444 100644
 
     #[test]
     fn test_per_file_truncation() {
-        let mut lines = vec!["diff --git a/src/big.rs b/src/big.rs".to_string(), "--- a/src/big.rs".to_string(), "+++ b/src/big.rs".to_string()];
+        let mut lines = vec![
+            "diff --git a/src/big.rs b/src/big.rs".to_string(),
+            "--- a/src/big.rs".to_string(),
+            "+++ b/src/big.rs".to_string(),
+        ];
         for i in 0..200 {
             lines.push(format!("+ let x{} = {};", i, i));
         }
         let diff = lines.join("\n");
 
         let filtered = filter_and_truncate_diff(&diff, &[], 50, 500);
-        assert!(filtered.content.contains("[... 153 lines truncated in src/big.rs ...]"));
+        assert!(
+            filtered
+                .content
+                .contains("[... 153 lines truncated in src/big.rs ...]")
+        );
     }
 }

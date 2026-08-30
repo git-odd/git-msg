@@ -1,8 +1,8 @@
-use std::time::Duration;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 use crate::config::ProviderConfig;
 use crate::sanitizer::sanitize_commit_message;
@@ -62,7 +62,11 @@ impl LlmClient {
         })
     }
 
-    pub fn generate_commit_message(&self, system_prompt: &str, user_prompt: &str) -> Result<String> {
+    pub fn generate_commit_message(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> Result<String> {
         let payload = ChatCompletionRequest {
             model: &self.provider.model,
             messages: vec![
@@ -115,12 +119,12 @@ impl LlmClient {
         let body_text = resp.text().unwrap_or_default();
 
         if !status.is_success() {
-            if let Ok(api_err) = serde_json::from_str::<ChatCompletionResponse>(&body_text) {
-                if let Some(err_obj) = api_err.error {
-                    if let Some(msg) = err_obj.message {
-                        bail!("LLM API error ({}): {}", status, msg);
-                    }
-                }
+            if let Some(msg) = serde_json::from_str::<ChatCompletionResponse>(&body_text)
+                .ok()
+                .and_then(|r| r.error)
+                .and_then(|e| e.message)
+            {
+                bail!("LLM API error ({}): {}", status, msg);
             }
             bail!("LLM API returned error status {}:\n{}", status, body_text);
         }

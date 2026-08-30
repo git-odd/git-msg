@@ -17,7 +17,9 @@ impl PromptBuilder {
                 .replace("{recent_commits}", &recent_str)
                 .replace("{language}", &config.behavior.language);
 
-            let sys_msg = "You are an expert Git commit message generator. Output ONLY the commit message.".to_string();
+            let sys_msg =
+                "You are an expert Git commit message generator. Output ONLY the commit message."
+                    .to_string();
             return (sys_msg, user_msg);
         }
 

@@ -1,12 +1,12 @@
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 
 use crate::cli::RunArgs;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Config {
     #[serde(default)]
     pub provider: ProviderConfig,
@@ -81,17 +81,6 @@ impl Default for DiffFilterConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            provider: ProviderConfig::default(),
-            behavior: BehaviorConfig::default(),
-            diff_filter: DiffFilterConfig::default(),
-            custom_prompt: None,
-        }
-    }
-}
-
 impl Config {
     pub fn template_toml() -> &'static str {
         r#"# git-msg configuration
@@ -147,11 +136,13 @@ ignore_files = [
         let path = Self::global_config_path()?;
         if !path.exists() {
             if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)
-                    .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+                fs::create_dir_all(parent).with_context(|| {
+                    format!("Failed to create config directory: {}", parent.display())
+                })?;
             }
-            fs::write(&path, Self::template_toml())
-                .with_context(|| format!("Failed to write default config to: {}", path.display()))?;
+            fs::write(&path, Self::template_toml()).with_context(|| {
+                format!("Failed to write default config to: {}", path.display())
+            })?;
         }
         Ok(path)
     }
@@ -163,45 +154,59 @@ ignore_files = [
     /// 4. 全局配置 (~/.config/git-msg/config.toml)
     /// 5. 默认值
     pub fn load(repo_root: Option<&Path>, cli_args: &RunArgs) -> Result<Self> {
-        let mut config = Self::default();
+        let mut config = Config {
+            provider: ProviderConfig::default(),
+            behavior: BehaviorConfig::default(),
+            diff_filter: DiffFilterConfig::default(),
+            custom_prompt: None,
+        };
 
         // 1. 全局配置
-        if let Ok(global_path) = Self::global_config_path() {
-            if global_path.exists() {
-                if let Ok(content) = fs::read_to_string(&global_path) {
-                    if let Ok(parsed) = toml::from_str::<Config>(&content) {
-                        config = Self::merge(config, parsed);
-                    }
-                }
-            }
+        if let Some(parsed) = Self::global_config_path()
+            .ok()
+            .and_then(|p| fs::read_to_string(p).ok())
+            .and_then(|c| toml::from_str::<Config>(&c).ok())
+        {
+            config = Self::merge(config, parsed);
         }
 
         // 2. 项目级配置 (.gitmsg.toml)
         if let Some(root) = repo_root {
             let project_path = root.join(".gitmsg.toml");
             if project_path.exists() {
-                let content = fs::read_to_string(&project_path)
-                    .with_context(|| format!("Failed to read project config at {}", project_path.display()))?;
-                let parsed: Config = toml::from_str(&content)
-                    .with_context(|| format!("Failed to parse project config at {}", project_path.display()))?;
+                let content = fs::read_to_string(&project_path).with_context(|| {
+                    format!(
+                        "Failed to read project config at {}",
+                        project_path.display()
+                    )
+                })?;
+                let parsed: Config = toml::from_str(&content).with_context(|| {
+                    format!(
+                        "Failed to parse project config at {}",
+                        project_path.display()
+                    )
+                })?;
                 config = Self::merge(config, parsed);
             }
         }
 
         // 3. 环境变量覆盖
         if let Ok(ep) = env::var("GIT_MSG_ENDPOINT") {
-            if !ep.trim().is_empty() {
-                config.provider.endpoint = ep;
+            let ep_trim = ep.trim();
+            if !ep_trim.is_empty() {
+                config.provider.endpoint = ep_trim.to_string();
             }
         }
         if let Ok(m) = env::var("GIT_MSG_MODEL") {
-            if !m.trim().is_empty() {
-                config.provider.model = m;
+            let m_trim = m.trim();
+            if !m_trim.is_empty() {
+                config.provider.model = m_trim.to_string();
             }
         }
         if let Ok(key) = env::var("GIT_MSG_API_KEY").or_else(|_| env::var("OPENAI_API_KEY")) {
-            if !key.trim().is_empty() {
-                config.provider.api_key = key;
+            let key_trim = key.trim();
+            if !key_trim.is_empty() {
+                config.provider.api_key = key_trim.to_string();
             }
         }
 
@@ -266,12 +271,13 @@ mod tests {
     #[test]
     fn test_default_config_parsing() {
         let toml_str = Config::template_toml();
-        let parsed: Config = toml::from_str(toml_str).expect("Default template should parse cleanly");
+        let parsed: Config =
+            toml::from_str(toml_str).expect("Default template should parse cleanly");
         assert_eq!(parsed.provider.endpoint, "http://127.0.0.1:1234");
         assert_eq!(parsed.provider.model, "qwen3.5-2b");
         assert_eq!(parsed.behavior.template, "conventional");
         assert_eq!(parsed.behavior.language, "en-US");
-        assert_eq!(parsed.behavior.auto_stage_if_empty, true);
+        assert!(parsed.behavior.auto_stage_if_empty);
         assert_eq!(parsed.behavior.max_file_diff_lines, 150);
     }
 }

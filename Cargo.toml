@@ -2,6 +2,14 @@
 name = "git-msg"
 version = "0.1.0"
 edition = "2024"
+description = "AI-powered Git commit message generator, local-first and lightweight."
+authors = ["plasma-blue"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/git-odd/git-msg"
+homepage = "https://github.com/git-odd/git-msg"
+readme = "README.md"
+keywords = ["git", "ai", "commit", "llm", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive", "env"] }

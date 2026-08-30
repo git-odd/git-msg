@@ -1,7 +1,6 @@
-# git-msg 配置文件
+# git-msg configuration
 
 [provider]
-# 支持基础 URL（如 http://127.0.0.1:1234）或带版本路径（如 http://localhost:1234/v1）
 endpoint = "http://127.0.0.1:1234"
 api_key = "not-needed"
 model = "qwen3.5-2b"
@@ -9,15 +8,13 @@ timeout_seconds = 30
 temperature = 0.2
 
 [behavior]
-# 内置模板: "conventional" | "simple" | "gitmoji"
-template = "conventional"
-language = "zh-CN"               # "zh-CN" | "en-US"
-auto_stage_if_empty = true       # 暂存区为空时是否自动暂存工作区所有更改
-max_diff_lines = 500             # 全局 Diff 总行数截断上限
-max_file_diff_lines = 150        # 单文件最大 Diff 行数
+template = "conventional"        # Options: conventional | simple | gitmoji
+language = "zh-CN"               # Options: zh-CN | en-US
+auto_stage_if_empty = true       # Auto-stage working tree if staging area is empty
+max_diff_lines = 500             # Global diff line limit for LLM context
+max_file_diff_lines = 150        # Per-file diff line quota to avoid single-file saturation
 
 [diff_filter]
-# 忽略不参与 Diff 提取的文件模式 (Glob 匹配)
 ignore_files = [
     "Cargo.lock",
     "package-lock.json",
@@ -29,9 +26,9 @@ ignore_files = [
     "*.lock"
 ]
 
-# 可选：自定义 Prompt，若配置则完全覆盖内置 template
-# 可用变量: {diff}, {recent_commits}, {language}
+# Optional: Override built-in templates with your custom prompt
+# Variables: {diff}, {recent_commits}, {language}
 # custom_prompt = """
-# 你是一个提交信息生成器，根据以下 Diff 生成中文提交信息：
+# You are a commit generator. Generate a commit message based on:
 # {diff}
 # """

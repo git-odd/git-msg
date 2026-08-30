@@ -1,4 +1,16 @@
 use glob::Pattern;
+use regex::Regex;
+use std::sync::LazyLock;
+
+static SECRET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{20,}|gho_[a-zA-Z0-9]{20,}|glpat-[a-zA-Z0-9\-]{20,}|AKIA[0-9A-Z]{16})").unwrap()
+});
+
+pub fn redact_secrets(text: &str) -> String {
+    SECRET_REGEX
+        .replace_all(text, "[REDACTED_SECRET]")
+        .to_string()
+}
 
 #[derive(Debug, Clone)]
 pub struct FileDiff {
@@ -91,8 +103,9 @@ pub fn filter_and_truncate_diff(
         ));
     }
 
+    let joined = result_chunks.join("\n\n");
     FilteredDiff {
-        content: result_chunks.join("\n\n"),
+        content: redact_secrets(&joined),
         summaries,
     }
 }
@@ -218,5 +231,17 @@ index 333..444 100644
                 .content
                 .contains("[... 153 lines truncated in src/big.rs ...]")
         );
+    }
+
+    #[test]
+    fn test_secret_redaction() {
+        let diff = r#"diff --git a/src/secret.rs b/src/secret.rs
++let api_key = "sk-1234567890abcdef1234567890";
++let gh_token = "ghp_1234567890abcdef1234567890";
+"#;
+        let filtered = filter_and_truncate_diff(diff, &[], 50, 500);
+        assert!(!filtered.content.contains("sk-1234567890abcdef1234567890"));
+        assert!(!filtered.content.contains("ghp_1234567890abcdef1234567890"));
+        assert!(filtered.content.contains("[REDACTED_SECRET]"));
     }
 }

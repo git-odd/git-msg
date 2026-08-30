@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
@@ -87,6 +88,7 @@ impl Config {
 
 [provider]
 endpoint = "http://127.0.0.1:1234"
+# Set to "not-needed" for local models. For cloud APIs, use $OPENAI_API_KEY or global config (`git msg config`)
 api_key = "not-needed"
 model = "qwen3.5-2b"
 timeout_seconds = 30
@@ -186,6 +188,16 @@ ignore_files = [
                         project_path.display()
                     )
                 })?;
+
+                // 检查项目级配置中是否包含非默认/敏感 API Key，提醒避免提交入库
+                let proj_key = parsed.provider.api_key.trim();
+                if !proj_key.is_empty() && proj_key != "not-needed" {
+                    eprintln!(
+                        "{} API key is set in project-level .gitmsg.toml. For security, consider using global config (`git msg config`) or $OPENAI_API_KEY instead.",
+                        "Warning:".yellow().bold()
+                    );
+                }
+
                 config = Self::merge(config, parsed);
             }
         }

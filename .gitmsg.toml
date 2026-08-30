@@ -2,6 +2,7 @@
 
 [provider]
 endpoint = "http://127.0.0.1:1234"
+# Set to "not-needed" for local models. For cloud APIs, use $OPENAI_API_KEY or global config (`git msg config`)
 api_key = "not-needed"
 model = "qwen3.5-2b"
 timeout_seconds = 30

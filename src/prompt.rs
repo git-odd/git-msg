@@ -76,13 +76,14 @@ Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, r
 
 Strict Rules:
 1. Output MUST contain ONLY the commit message. No explanations, no markdown code fences, no prefix text.
-2. Keep the subject line concise (under 72 chars), imperative mood, no ending period.
-3. Language: en-US.
+2. The first line MUST start directly with <type>(<scope>): without any leading dashes, bullets, or quotes.
+3. Keep the subject line concise (under 72 chars), imperative mood, no ending period.
+4. Language: en-US.
 
 Examples:
-- feat(auth): add OAuth2 login support
-- fix(config): resolve endpoint URL normalization error
-- chore(config): update default model to qwen3.5-4b and remove obsolete docs
+feat(auth): add OAuth2 login support
+fix(config): resolve endpoint URL normalization error
+chore(config): update default model to qwen3.5-4b and remove obsolete docs
 "#
             .to_string()
         } else {
@@ -94,7 +95,7 @@ Diff 语义准则：
 3. 综合所有修改过的文件，提取最核心的变更意图。
 
 格式要求：
-第一行格式必须为 Conventional Commits 规范（英文类型前缀 + 冒号 + 空格 + 中文描述）：
+第一行格式必须直接以 Conventional Commits 开头（英文类型前缀 + 冒号 + 空格 + 中文描述），严禁在行首添加 '-' 或 '*'：
 feat(scope): 描述 或 chore(scope): 描述 或 fix: 描述
 
 - 可选正文：若涉及多处细节，空一行后以列表列出具体变更点
@@ -102,14 +103,14 @@ feat(scope): 描述 或 chore(scope): 描述 或 fix: 描述
 可用类型: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
 
 核心规则：
-1. 第一行必须严格遵循 `<type>(<scope>): <中文描述>` 格式，类型必须为英文，冒号后有一个空格。
+1. 第一行必须严格遵循 `<type>(<scope>): <中文描述>` 格式，类型必须为英文，冒号后有一个空格，且行首绝不加任何符号。
 2. 严禁输出任何解释、思考过程、代码块围栏（```）或引导性前缀。
 3. 语言使用中文（zh-CN），首行保持精炼（72 字符以内）。
 
 示例：
-- chore(config): 更新默认模型为 qwen3.5-4b 并删除旧版中文文档
-- feat(auth): 支持 OAuth2 快捷登录与状态校验
-- refactor(filter): 优化 Diff 行数截断计算逻辑
+chore(config): 更新默认模型为 qwen3.5-4b 并删除旧版中文文档
+feat(git-msg): 优化 Diff 行数截断计算逻辑，支持智能提交
+fix(filter): 修复文件名包含空格时的匹配异常
 "#
             .to_string()
         }

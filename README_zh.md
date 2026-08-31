@@ -1,9 +1,19 @@
-# git-msg
+<div align="center">
 
-[![Crates.io](https://img.shields.io/crates/v/git-msg.svg)](https://crates.io/crates/git-msg)
-[![License](https://img.shields.io/crates/l/git-msg.svg)](https://crates.io/crates/git-msg)
+# 💬 git-msg
 
-[English](README.md) | [中文](README.zh.md)
+**基于本地大模型、轻量高效的 Git 智能提交信息生成工具。**
+
+[![Organization](https://img.shields.io/badge/Org-git--odd-blue?style=flat-square&logo=github)](https://github.com/git-odd)
+[![Suite](https://img.shields.io/badge/Suite-git--odd%20Ecosystem-purple?style=flat-square&logo=git)](https://github.com/git-odd)
+[![Crates.io](https://img.shields.io/crates/v/git-msg.svg?style=flat-square)](https://crates.io/crates/git-msg)
+[![License](https://img.shields.io/badge/License-MIT%20%2F%20Apache--2.0-orange?style=flat-square)](LICENSE-MIT)
+
+[English](README.md) | [简体中文](README_zh.md)
+
+</div>
+
+> 隶属于 [**`git-odd`**](https://github.com/git-odd) 工具家族 — *用奇怪的方式解决 Git 奇怪的问题。*
 
 `git-msg` 是一个基于 Rust 开发的轻量级、本地优先（Local-First）的智能 Git 提交信息生成工具。它作为 Git 原生子命令（`git msg`）无缝集成到日常开发工作流中，自动分析暂存区或工作区代码差异（Diff），结合上下文生成规范的 Conventional Commits、Gitmoji 或简明风格提交信息。
 
@@ -153,4 +163,6 @@ ignore_files = [
 
 ## 📄 许可证
 
-本项目基于 MIT OR Apache-2.0 协议开源。
+本项目采用双许可证授权，您可以按需选择以下任一许可使用：
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) 或 <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT License ([LICENSE-MIT](LICENSE-MIT) 或 <http://opensource.org/licenses/MIT>)

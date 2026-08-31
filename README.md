@@ -1,9 +1,19 @@
-# git-msg
+<div align="center">
 
-[![Crates.io](https://img.shields.io/crates/v/git-msg.svg)](https://crates.io/crates/git-msg)
-[![License](https://img.shields.io/crates/l/git-msg.svg)](https://crates.io/crates/git-msg)
+# 💬 git-msg
 
-[English](README.md) | [中文](README.zh.md)
+**AI-powered Git commit message generator, local-first and lightweight.**
+
+[![Organization](https://img.shields.io/badge/Org-git--odd-blue?style=flat-square&logo=github)](https://github.com/git-odd)
+[![Suite](https://img.shields.io/badge/Suite-git--odd%20Ecosystem-purple?style=flat-square&logo=git)](https://github.com/git-odd)
+[![Crates.io](https://img.shields.io/crates/v/git-msg.svg?style=flat-square)](https://crates.io/crates/git-msg)
+[![License](https://img.shields.io/badge/License-MIT%20%2F%20Apache--2.0-orange?style=flat-square)](LICENSE-MIT)
+
+[English](README.md) | [简体中文](README_zh.md)
+
+</div>
+
+> Part of the [**`git-odd`**](https://github.com/git-odd) suite — *solving odd Git problems in odd ways.*
 
 `git-msg` is a smart, lightweight, and local-first AI Git commit message generator built in Rust. It seamlessly integrates as a native Git subcommand (`git msg`), analyzes your staged or working tree diffs, and automatically generates high-quality commit messages conforming to Conventional Commits, Gitmoji, or custom styles.
 
@@ -147,10 +157,11 @@ ignore_files = [
 # You are a commit generator. Generate a commit message based on:
 # {diff}
 # """
-```
-
 ---
 
 ## 📄 License
 
-MIT OR Apache-2.0
+Dual-licensed under either of:
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
